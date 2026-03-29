@@ -1,47 +1,38 @@
+```mermaid
 flowchart LR
-    %% Definição de Cores e Estilos
-    classDef infra fill:#f9f9f9,stroke:#333,stroke-width:2px,stroke-dasharray: 5 5;
+    %% Definição de Cores
     classDef storage fill:#0078D4,stroke:#fff,stroke-width:2px,color:#fff;
     classDef compute fill:#FF3621,stroke:#fff,stroke-width:2px,color:#fff;
     classDef security fill:#008AD7,stroke:#fff,stroke-width:2px,color:#fff;
 
-    %% Fontes de Dados
-    subgraph Origem ["📡 Fontes de Dados (Telecom)"]
-        A1[Logs de Antenas / ERBs]
-        A2[CDRs - Bilhetagem]
+    subgraph Origem ["📡 Fontes de Dados"]
+        A1["Antenas (ERBs)"]
+        A2["Bilhetagem (CDRs)"]
     end
 
-    %% Camada de Segurança
-    subgraph Seguranca ["🔐 Governança & Segurança (Azure)"]
-        KV[Azure Key Vault]:::security
-        IAM[Managed Identities]:::security
-    end
-
-    %% Infraestrutura provisionada pelo Terraform
-    subgraph Cloud ["☁️ Azure Cloud (Provisionado via Terraform)"]
-        direction LR
-        
-        %% Data Lake (Medallion Architecture)
-        subgraph ADLS ["🪣 Azure Data Lake Storage Gen2"]
-            B[🥉 Bronze\n(Dados Brutos)]:::storage
-            S[🥈 Silver\n(Limpos / Delta Lake)]:::storage
-            G[🥇 Gold\n(Agregados / Negócio)]:::storage
+    subgraph Nuvem ["☁️ Azure Cloud"]
+        subgraph ADLS ["🪣 Data Lake"]
+            B["🥉 Bronze<br>(Bruto)"]:::storage
+            S["🥈 Silver<br>(Limpo)"]:::storage
+            G["🥇 Gold<br>(Negócio)"]:::storage
         end
 
-        %% Processamento
-        subgraph Databricks ["🧠 Processamento Distribuído"]
-            SP1[PySpark Job\nLimpeza & Filtro]:::compute
-            SP2[PySpark Job\nAgregação & Regras]:::compute
+        subgraph Processamento ["🧠 Databricks Workspace"]
+            SP1["PySpark: Limpeza"]:::compute
+            SP2["PySpark: Agregação"]:::compute
         end
     end
 
-    %% Fluxo de Dados
-    Origem -->|Ingestão| B
-    B -->|Leitura| SP1
-    SP1 -->|Gravação Delta| S
-    S -->|Leitura| SP2
-    SP2 -->|Gravação Delta| G
+    subgraph Seguranca ["🔐 Governança"]
+        KV["Azure Key Vault"]:::security
+    end
 
-    %% Relacionamento de Segurança
-    KV -.->|Injeta Segredos| Databricks
-    IAM -.->|Autoriza Acesso| ADLS
+    A1 --> B
+    A2 --> B
+    B -->|Filtra| SP1
+    SP1 -->|Salva| S
+    S -->|Agrupa| SP2
+    SP2 -->|Tabela| G
+
+    KV -.->|Injeta Senhas| Processamento
+```
